@@ -11,6 +11,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Main {
 
@@ -28,10 +30,10 @@ public class Main {
         String password = "1q2w3e4r5t!@#$%aA@th";
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        LocalDate startDate = LocalDate.of(2025, 1, 1);
         LocalDate endDate = LocalDate.now();
 
-        String sharedPath = "D:\\ChinhSoftWare\\Bao Cao TSTC New";
+        String sharedPath = "D:\\Bao Cao TSTC From 2025";
         List<String> danhSachFileDaXuat = new ArrayList<>();
 
         try (Connection conn = DriverManager.getConnection(url, user, password)) {
@@ -189,9 +191,11 @@ public class Main {
                 sheet.shiftRows(startRow, lastRow, rowsToInsert);
             }
         }
+
+        // 👉 Font chữ 14pt
         Font normalFont = workbook.createFont();
         normalFont.setFontName("Times New Roman");
-        normalFont.setFontHeightInPoints((short) 11);
+        normalFont.setFontHeightInPoints((short) 14);
         normalFont.setBold(false);
 
         CellStyle borderedStyle = workbook.createCellStyle();
@@ -212,7 +216,7 @@ public class Main {
             Font redFont = workbook.createFont();
             redFont.setColor(IndexedColors.RED.getIndex());
             redFont.setFontName("Times New Roman");
-            redFont.setFontHeightInPoints((short) 11);
+            redFont.setFontHeightInPoints((short) 14); // 👉 Font đỏ cũng 14pt
             style.setFont(redFont);
             cell.setCellStyle(style);
         } else {
@@ -224,7 +228,10 @@ public class Main {
                 row.createCell(1).setCellValue(item.hoTen);
                 row.createCell(4).setCellValue(item.diaChi);
                 row.createCell(8).setCellValue(item.soLuong);
-                row.createCell(9).setCellValue(item.seri);
+
+                // 👉 Trích xuất và ghi số seri đã lọc
+                List<String> seriList = extractSeri(item.seri);
+                row.createCell(9).setCellValue(String.join(", ", seriList));
 
                 int[] singleColumns = {0, 8, 9};
                 for (int col : singleColumns) {
@@ -254,7 +261,12 @@ public class Main {
                 startRow++;
             }
         }
+
+        // 👉 Đặt độ rộng cột seri để hiển thị đầy đủ
+        sheet.setColumnWidth(9, 4000);
     }
+
+
 
     private static void removeOverlappingMergedRegions(Sheet sheet, int firstRow, int lastRow, int firstCol, int lastCol) {
         List<Integer> toRemove = new ArrayList<>();
@@ -271,38 +283,18 @@ public class Main {
         }
     }
 
-    private static void copyOutputFolderToSharedPath(String sourceRootFolder, String sharedRootPath) {
-        try {
-            // Tạo thư mục đích nếu chưa có
-            File sharedRoot = new File(sharedRootPath);
-            if (!sharedRoot.exists()) {
-                boolean created = sharedRoot.mkdirs();
-                if (!created) {
-                    System.out.println("❌ Không thể tạo thư mục chia sẻ: " + sharedRootPath);
-                    return;
-                }
-            }
-
-            // Lệnh robocopy: /E sao chép cả thư mục con, /NFL /NDL giảm log, /NJH /NJS bỏ header/footer
-            String command = String.format("cmd /c robocopy \"%s\" \"%s\" /E /NFL /NDL /NJH /NJS /NC /NS",
-                    sourceRootFolder, sharedRootPath);
-
-            Process process = Runtime.getRuntime().exec(command);
-            int exitCode = process.waitFor();
-
-            if (exitCode <= 7) {
-                System.out.println("✅ Đã sao chép toàn bộ thư mục sang: " + sharedRootPath);
-            } else {
-                System.out.println("❌ Lỗi sao chép thư mục. Mã lỗi: " + exitCode);
-            }
-        } catch (Exception e) {
-            System.out.println("❌ Lỗi khi sao chép thư mục sang máy chia sẻ:");
-            e.printStackTrace();
-        }
-    }
     public static String boDau(String text) {
         text = Normalizer.normalize(text, Normalizer.Form.NFD);
         return text.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
-
+    public static List<String> extractSeri(String input) {
+        List<String> result = new ArrayList<>();
+        // Biểu thức chính quy cho phép 1–3 chữ cái + tùy chọn khoảng trắng + 6–8 chữ số
+        Pattern pattern = Pattern.compile("\\b[\\p{L}]{1,3}\\s?\\d{6,8}\\b");
+        Matcher matcher = pattern.matcher(input);
+        while (matcher.find()) {
+            result.add(matcher.group().trim());
+        }
+        return result;
+    }
 }
