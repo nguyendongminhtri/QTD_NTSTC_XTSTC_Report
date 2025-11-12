@@ -78,7 +78,7 @@ public class Main {
             FROM vwGiao_Dich
             WHERE 
                  CAST(Ngay AS DATE) = ?
-                AND ten_loai_giao_dich IN (N'Xuất tài sản thế chấp', N'Nhập tài sản thế chấp')
+                AND ten_loai_giao_dich IN (N'Xuất tài sản thế chấp', N'Nhập tài sản thế chấp', N'Xuất TS giữ hộ')
                 AND object_id IS NOT NULL
         )
         SELECT 
