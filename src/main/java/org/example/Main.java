@@ -12,6 +12,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,51 +29,63 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        String url = "jdbc:sqlserver://MAYCHU:1433;databaseName=ITDVAPCF;encrypt=true;trustServerCertificate=true;";
-        String user = "sa";
-        String password = "1q2w3e4r5t!@#$%aA@th";
+        // Tạo scheduler với 1 thread
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-        LocalDate startDate = LocalDate.of(2025, 1, 1);
-        LocalDate endDate = LocalDate.now();
+        Runnable job = () -> {
+            System.out.println("🔄 Job chạy lúc: " + java.time.LocalDateTime.now());
 
-        String sharedPath = "D:\\Bao Cao TSTC 2025 Test";
-        List<String> danhSachFileDaXuat = new ArrayList<>();
+            String url = "jdbc:sqlserver://MAYCHU:1433;databaseName=ITDVAPCF;encrypt=true;trustServerCertificate=true;";
+            String user = "sa";
+            String password = "1q2w3e4r5t!@#$%aA@th";
 
-        try (Connection conn = DriverManager.getConnection(url, user, password)) {
-            System.out.println("✅ Kết nối DB thành công.");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+            LocalDate startDate = LocalDate.of(2025, 1, 1);
+            LocalDate endDate = LocalDate.now();
 
-            LocalDate cur = startDate;
-            while (!cur.isAfter(endDate)) {
-                String fixedDate = cur.format(formatter);
-                System.out.println("🔄 Đang xử lý ngày: " + fixedDate);
-                processDate(fixedDate, conn, danhSachFileDaXuat); // truyền kết nối vào
-                cur = cur.plusDays(1);
-            }
+            String sharedPath = "D:\\Bao Cao TSTC From 2025";
+            List<String> danhSachFileDaXuat = new ArrayList<>();
 
-            System.out.println("🔁 Bắt đầu sao chép tất cả file đã xuất sang: " + sharedPath);
-            for (String filePath : danhSachFileDaXuat) {
-                File sourceFile = new File(filePath);
-                int index = sourceFile.getAbsolutePath().indexOf("output");
-                String relativePath = sourceFile.getAbsolutePath().substring(index + "output".length());
-                File destFile = new File(sharedPath + File.separator + relativePath);
-                destFile.getParentFile().mkdirs();
+            try (Connection conn = DriverManager.getConnection(url, user, password)) {
+                System.out.println("✅ Kết nối DB thành công.");
 
-                try {
-                    Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    System.out.println("📁 Đã sao chép: " + sourceFile.getName() + " → " + destFile.getAbsolutePath());
-                } catch (IOException e) {
-                    System.out.println("❌ Lỗi sao chép file: " + sourceFile.getName());
-                    e.printStackTrace();
+                LocalDate cur = startDate;
+                while (!cur.isAfter(endDate)) {
+                    String fixedDate = cur.format(formatter);
+                    System.out.println("🔄 Đang xử lý ngày: " + fixedDate);
+                    processDate(fixedDate, conn, danhSachFileDaXuat); // gọi hàm xử lý
+                    cur = cur.plusDays(1);
                 }
-            }
 
-            System.out.println("✅ Hoàn tất sao chép các file.");
-        } catch (SQLException e) {
-            System.out.println("❌ Không thể kết nối DB:");
-            e.printStackTrace();
-        }
+                System.out.println("🔁 Bắt đầu sao chép tất cả file đã xuất sang: " + sharedPath);
+                for (String filePath : danhSachFileDaXuat) {
+                    File sourceFile = new File(filePath);
+                    int index = sourceFile.getAbsolutePath().indexOf("output");
+                    String relativePath = sourceFile.getAbsolutePath().substring(index + "output".length());
+                    File destFile = new File(sharedPath + File.separator + relativePath);
+                    destFile.getParentFile().mkdirs();
+
+                    try {
+                        Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        System.out.println("📁 Đã sao chép: " + sourceFile.getName() + " → " + destFile.getAbsolutePath());
+                    } catch (IOException e) {
+                        System.out.println("❌ Lỗi sao chép file: " + sourceFile.getName());
+                        e.printStackTrace();
+                    }
+                }
+
+                System.out.println("✅ Hoàn tất sao chép các file.");
+            } catch (SQLException e) {
+                System.out.println("❌ Không thể kết nối DB:");
+                e.printStackTrace();
+            }
+        };
+
+        // Chạy ngay lần đầu, sau đó lặp lại mỗi 10 phút
+        scheduler.scheduleAtFixedRate(job, 0, 5, TimeUnit.SECONDS);
     }
+
+
 
     private static void processDate(String fixedDate, Connection conn, List<String> danhSachFileDaXuat) {
         String sql = """
@@ -135,17 +150,16 @@ public class Main {
 
         // Chuyển fixedDate thành LocalDate
         LocalDate ngay = LocalDate.parse(fixedDate, DateTimeFormatter.ofPattern("yyyyMMdd"));
-
-        int nextRowXuat = ghiVanBanCoDinhTren(workbook, sheetXuat,  ngay);
+        int nextRowXuat = ghiVanBanCoDinhTren(workbook, sheetXuat, "Xuất", ngay);
         int betweenRowXuat = ghiDuLieu(workbook, sheetXuat, danhSachXuat, nextRowXuat);
-        int endRowXuat = ghiVanBanCoDinhDuoi(workbook,sheetXuat, betweenRowXuat, ngay);
+        int endRowXuat = ghiVanBanCoDinhDuoi(workbook, sheetXuat, betweenRowXuat, "Xuất", ngay);
 
-        int nextRowNhap = ghiVanBanCoDinhTren(workbook, sheetNhap,  ngay);
-        int endRowNhap = ghiDuLieu(workbook, sheetNhap, danhSachNhap, nextRowNhap);
-
+        int nextRowNhap = ghiVanBanCoDinhTren(workbook, sheetNhap, "Nhập", ngay);
+        int betweenNhap = ghiDuLieu(workbook, sheetNhap, danhSachNhap, nextRowNhap);
+        int endRowNhap = ghiVanBanCoDinhDuoi(workbook, sheetNhap, betweenNhap, "Nhập", ngay);
 // 👉 Đặt vùng in sau khi đã ghi xong tất cả
-        setupPrintA4(workbook, sheetXuat, 0, 4, 0, endRowXuat-1);
-        setupPrintA4(workbook, sheetNhap, 0, 4, 0, endRowNhap-1);
+        setupPrintA4(workbook, sheetXuat, 0, 4, 0, endRowXuat - 1);
+        setupPrintA4(workbook, sheetNhap, 0, 4, 0, endRowNhap - 1);
 
         // Tạo thư mục đầu ra
         try {
@@ -172,7 +186,7 @@ public class Main {
     }
 
 
-    private static int ghiVanBanCoDinhTren(Workbook workbook, Sheet sheet, LocalDate ngay) {
+    private static int ghiVanBanCoDinhTren(Workbook workbook, Sheet sheet, String isXuatNhap, LocalDate ngay) {
         int currentRow = 0;
 
         // Font đậm
@@ -227,13 +241,13 @@ public class Main {
         italicRightStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         italicRightStyle.setWrapText(true);
 
-        currentRow = writeHeader(workbook, sheet, currentRow,  boldCenterStyle);
+        currentRow = writeHeader(workbook, sheet, currentRow, boldCenterStyle);
 
         currentRow++;
         // Các dòng căn giữa + đậm
         String[] centeredLines = {
                 "QUYẾT ĐỊNH",
-                "\"V/v xuất kho tài sản thế chấp, cầm cố\"",
+                "\"V/v " + isXuatNhap.toLowerCase() + " kho tài sản thế chấp, cầm cố\"",
         };
         currentRow = writeLeftNormalLines(sheet, currentRow, centeredLines, boldCenterStyle, 1, 5);
         // Hai dòng nghiêng
@@ -252,16 +266,16 @@ public class Main {
         currentRow++;
         String[] centeredLines2 = {
                 "BAN ĐIỀU HÀNH QTD THÁI HỌC",
-                "QUYẾT ĐỊNH XUẤT KHO",
+                "QUYẾT ĐỊNH " + isXuatNhap.toUpperCase() + " KHO",
         };
         currentRow = writeLeftNormalLines(sheet, currentRow, centeredLines2, boldCenterStyle, 1, 5);
         currentRow++;
         currentRow = writeLeftBoltLine(sheet, currentRow,
-                "I. Xuất kho tài sản thế chấp, cầm cố của khách hàng:",
+                "I. " + isXuatNhap + " kho tài sản thế chấp, cầm cố của khách hàng:",
                 leftStyle, 0, 6);
 
         currentRow = writeLeftNormalLines(sheet, currentRow,
-                new String[]{"- Xuất kho tài sản thế chấp, cầm cố của khách hàng (có bảng kê kèm theo)"},
+                new String[]{"- " + isXuatNhap + " kho tài sản thế chấp, cầm cố của khách hàng (có bảng kê kèm theo)"},
                 normalLeftStyle, 0, 6);
 
 
@@ -295,7 +309,7 @@ public class Main {
                 "GIÁM ĐỐC",
         };
         currentRow = writeLeftNormalLines(sheet, currentRow, chuKyGD, boldCenterStyle, 2, 5);
-       currentRow+=5;
+        currentRow += 5;
         currentRow = writeLeftBoltLine(sheet, currentRow,
                 "Phùng Thị Loan",
                 normalCenterStyle, 2, 5);
@@ -318,10 +332,10 @@ public class Main {
         }
         currentRow++;
         currentRow++;
-        currentRow = writeHeader(workbook, sheet, currentRow,  boldCenterStyle);
+        currentRow = writeHeader(workbook, sheet, currentRow, boldCenterStyle);
         currentRow++;
         currentRow = writeLeftBoltLine(sheet, currentRow,
-                "BẢNG KÊ XUẤT KHO",
+                "BẢNG KÊ " + isXuatNhap.toUpperCase() + " KHO",
                 boldCenterStyle, 1, 4);
         // Ngày tháng năm
         String ngayThangNam2 = String.format("Ngày %02d tháng %02d năm %d",
@@ -334,15 +348,14 @@ public class Main {
         rDate2.setHeightInPoints(22);
 
         currentRow = writeLeftNormalLines(sheet, currentRow,
-                new String[]{"- Xuất kho tài sản thế chấp, cầm cố của khách hàng"},
+                new String[]{"- " + isXuatNhap + " kho tài sản thế chấp, cầm cố của khách hàng"},
                 normalLeftStyle, 0, 6);
-
-// Sau khi ghi xong văn bản cố định
-        setupPrintA4(workbook, sheet, 0, 4, 0, currentRow-1);
+        setupPrintA4(workbook, sheet, 0, 4, 0, currentRow - 1);
 
         return currentRow;
     }
-    private static int ghiVanBanCoDinhDuoi(Workbook workbook, Sheet sheet, int startRow, LocalDate ngay) {
+
+    private static int ghiVanBanCoDinhDuoi(Workbook workbook, Sheet sheet, int startRow, String isXuatNhap, LocalDate ngay) {
         startRow++;
         int currentRow = startRow;
 
@@ -395,7 +408,6 @@ public class Main {
         boldCenterStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 
 
-
         // Dòng tiêu đề các chức danh
         Row rowChucDanh = sheet.createRow(currentRow++);
         String[] chucDanh = {"THỦ KHO", "KẾ TOÁN", "GIÁM ĐỐC"};
@@ -432,7 +444,7 @@ public class Main {
         currentRow++;
         String[] centeredLines = {
                 "QUYẾT ĐỊNH",
-                "\"V/v xuất kho hòm tôn bảo quản tiền mặt, giấy tờ có giá\"",
+                "\"V/v " + isXuatNhap.toLowerCase() + " kho hòm tôn bảo quản tiền mặt, giấy tờ có giá\"",
         };
 
         currentRow = writeLeftNormalLines(sheet, currentRow, centeredLines, boldCenterStyle, 1, 5);
@@ -452,18 +464,18 @@ public class Main {
         currentRow++;
         String[] centeredLines2 = {
                 "BAN ĐIỀU HÀNH QTD THÁI HỌC",
-                "QUYẾT ĐỊNH XUẤT KHO",
+                "QUYẾT ĐỊNH " + isXuatNhap.toUpperCase() + " KHO",
         };
         currentRow = writeLeftNormalLines(sheet, currentRow, centeredLines2, boldCenterStyle, 1, 5);
         currentRow++;
         currentRow = writeLeftBoltLine(sheet, currentRow,
-                "I. Xuất kho tiền mặt, các loại giấy tờ có giá cụ thể như sau:",
+                "I. " + isXuatNhap + " kho tiền mặt, các loại giấy tờ có giá cụ thể như sau:",
                 boldLeftStyle, 0, 6);
         currentRow = writeLeftNormalLines(sheet, currentRow,
-                new String[]{"- Xuất kho 01 hòm tôn bảo quản tiền mặt, giấy tờ có giá trong giờ nghỉ trưa"},
+                new String[]{"- " + isXuatNhap + " kho 01 hòm tôn bảo quản tiền mặt, giấy tờ có giá trong giờ nghỉ trưa"},
                 normalLeftStyle, 0, 6);
         currentRow = writeLeftBoltLine(sheet, currentRow,
-                "II. Người chịu trách nhiệm vận chuyển số tài sa trên:",
+                "II. Người chịu trách nhiệm vận chuyển số tài sản trên:",
                 boldLeftStyle, 0, 6);
         String[] row151617 = {
                 "1. Bà: Phùng Thị Loan - Giám đốc",
@@ -491,7 +503,7 @@ public class Main {
                 "GIÁM ĐỐC",
         };
         currentRow = writeLeftNormalLines(sheet, currentRow, chuKyGD, boldCenterStyle, 2, 5);
-        currentRow+=5;
+        currentRow += 5;
         currentRow = writeLeftBoltLine(sheet, currentRow,
                 "Phùng Thị Loan",
                 centerStyle, 2, 5);
@@ -543,9 +555,10 @@ public class Main {
 
     /**
      * Ghi phần tiêu đề: bên trái + quốc hiệu + khẩu hiệu gạch chân
-     * @param workbook Workbook hiện tại
-     * @param sheet Sheet cần ghi
-     * @param currentRow dòng bắt đầu
+     *
+     * @param workbook        Workbook hiện tại
+     * @param sheet           Sheet cần ghi
+     * @param currentRow      dòng bắt đầu
      * @param boldCenterStyle Style căn giữa + đậm
      * @return chỉ số dòng tiếp theo
      */
@@ -603,16 +616,17 @@ public class Main {
 
     /**
      * Ghi một hoặc nhiều dòng văn bản vào sheet với style và merge vùng
-     * @param sheet Sheet cần ghi
+     *
+     * @param sheet      Sheet cần ghi
      * @param currentRow chỉ số dòng hiện tại
-     * @param lines mảng các chuỗi cần ghi (có thể 1 hoặc nhiều phần tử)
-     * @param style CellStyle áp dụng
-     * @param firstCol cột bắt đầu merge
-     * @param lastCol cột kết thúc merge
+     * @param lines      mảng các chuỗi cần ghi (có thể 1 hoặc nhiều phần tử)
+     * @param style      CellStyle áp dụng
+     * @param firstCol   cột bắt đầu merge
+     * @param lastCol    cột kết thúc merge
      * @return chỉ số dòng tiếp theo
      */
     private static int writeLeftNormalLines(Sheet sheet, int currentRow, String[] lines,
-                                  CellStyle style, int firstCol, int lastCol) {
+                                            CellStyle style, int firstCol, int lastCol) {
         for (String line : lines) {
             Row row = sheet.createRow(currentRow++);
             Cell cell = row.createCell(firstCol);
@@ -639,7 +653,7 @@ public class Main {
     }
 
     private static int writeLeftBoltLine(Sheet sheet, int currentRow, String text,
-                                        CellStyle style, int firstCol, int lastCol) {
+                                         CellStyle style, int firstCol, int lastCol) {
         Row row = sheet.createRow(currentRow++);
         Cell cell = row.createCell(firstCol);
         cell.setCellValue(text);
@@ -665,7 +679,7 @@ public class Main {
         boldFont.setFontHeightInPoints((short) 14);
         boldFont.setBold(true);
 
-        // Style cho dữ liệu có border
+        // Style cho dữ liệu có border + wrap text
         CellStyle borderedStyle = workbook.createCellStyle();
         borderedStyle.setBorderTop(BorderStyle.THIN);
         borderedStyle.setBorderBottom(BorderStyle.THIN);
@@ -673,6 +687,7 @@ public class Main {
         borderedStyle.setBorderRight(BorderStyle.THIN);
         borderedStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         borderedStyle.setFont(normalFont);
+        borderedStyle.setWrapText(true); // Cho phép xuống dòng
 
         // Style cho header: border + bold + căn giữa
         CellStyle headerStyle = workbook.createCellStyle();
@@ -713,12 +728,13 @@ public class Main {
         } else {
             int stt = 1;
             for (TaiSanTheChap item : danhSach) {
-                Row row = sheet.createRow(currentRow++);
-                row.setHeightInPoints(20);
-
                 String diaChiLoc = extractFirstAddressPart(item.diaChi);
                 List<String> seriLoc = extractSeri(item.seri);
-                String seriChuoi = seriLoc.isEmpty() ? item.seri : String.join(", ", seriLoc);
+                String seriChuoi = seriLoc.isEmpty() ? item.seri : String.join("\n", seriLoc);
+                int lineCount = seriChuoi.split("\n").length;
+
+                Row row = sheet.createRow(currentRow++);
+                row.setHeightInPoints(lineCount * 15); // Điều chỉnh chiều cao dòng theo số dòng
 
                 row.createCell(0).setCellValue(stt++);
                 row.createCell(1).setCellValue(item.hoTen);
@@ -743,14 +759,16 @@ public class Main {
     }
 
 
+
     /**
      * Thiết lập khổ in A4 và căn giữa cho toàn bộ sheet
+     *
      * @param workbook Workbook chứa sheet
-     * @param sheet Sheet cần thiết lập
+     * @param sheet    Sheet cần thiết lập
      * @param firstCol cột bắt đầu vùng in
-     * @param lastCol cột kết thúc vùng in
+     * @param lastCol  cột kết thúc vùng in
      * @param firstRow dòng bắt đầu vùng in
-     * @param lastRow dòng kết thúc vùng in
+     * @param lastRow  dòng kết thúc vùng in
      */
     private static void setupPrintA4(Workbook workbook, Sheet sheet,
                                      int firstCol, int lastCol,
@@ -759,8 +777,8 @@ public class Main {
         printSetup.setPaperSize(PrintSetup.A4_PAPERSIZE);
         printSetup.setLandscape(false); // true nếu muốn in ngang
         // 👉 Fit to page
-        printSetup.setFitWidth((short)1);
-        printSetup.setFitHeight((short)0);
+        printSetup.setFitWidth((short) 1);
+        printSetup.setFitHeight((short) 0);
         sheet.setAutobreaks(true);
 
         sheet.setHorizontallyCenter(true); // căn giữa ngang
