@@ -82,7 +82,7 @@ public class Main {
         };
 
         // Chạy ngay lần đầu, sau đó lặp lại mỗi 10 phút
-        scheduler.scheduleAtFixedRate(job, 0, 5, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(job, 0, 55, TimeUnit.SECONDS);
     }
 
 
@@ -330,8 +330,7 @@ public class Main {
         for (int i = 0; i <= 4; i++) {
             sheet.setColumnWidth(i, 6000);
         }
-        currentRow++;
-        currentRow++;
+        currentRow+=15;
         currentRow = writeHeader(workbook, sheet, currentRow, boldCenterStyle);
         currentRow++;
         currentRow = writeLeftBoltLine(sheet, currentRow,
@@ -748,12 +747,20 @@ public class Main {
             }
         }
 
-        // 👉 Đặt độ rộng cột
+        // 👉 Đặt độ rộng cột cố định cho các cột khác
         sheet.setColumnWidth(0, 1500);
-        sheet.setColumnWidth(1, 5000);
         sheet.setColumnWidth(2, 6000);
         sheet.setColumnWidth(3, 3200);
         sheet.setColumnWidth(4, 5000);
+
+        // 👉 Tự động fit cột "Họ và tên"
+        sheet.autoSizeColumn(1);
+
+        // 👉 Giới hạn để không vượt khổ A4
+        int maxWidth = 8000; // ~70-80 ký tự Times New Roman 14pt
+        if (sheet.getColumnWidth(1) > maxWidth) {
+            sheet.setColumnWidth(1, maxWidth);
+        }
 
         return currentRow;
     }
