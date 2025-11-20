@@ -363,6 +363,11 @@ public class Main {
         fontNormal.setFontName("Times New Roman");
         fontNormal.setFontHeightInPoints((short) 13);
 
+        // Font chữ ký
+        Font chuKy = workbook.createFont();
+        chuKy.setFontName("Times New Roman");
+        chuKy.setFontHeightInPoints((short) 12);
+
         // Font đậm
         Font fontBold = workbook.createFont();
         fontBold.setFontName("Times New Roman");
@@ -401,6 +406,12 @@ public class Main {
         centerStyle.setAlignment(HorizontalAlignment.CENTER);
         centerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 
+        // Style căn giữa
+        CellStyle chuKyStyle = workbook.createCellStyle();
+        chuKyStyle.setFont(chuKy);
+        chuKyStyle.setAlignment(HorizontalAlignment.CENTER);
+        chuKyStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
         CellStyle boldCenterStyle = workbook.createCellStyle();
         boldCenterStyle.setFont(fontBold);
         boldCenterStyle.setAlignment(HorizontalAlignment.CENTER);
@@ -423,7 +434,7 @@ public class Main {
         for (int i = 0; i < ghiChu.length; i++) {
             Cell cell = rowGhiChu.createCell(i * 2);
             cell.setCellValue(ghiChu[i]);
-            cell.setCellStyle(centerStyle);
+            cell.setCellStyle(chuKyStyle);
             sheet.addMergedRegion(new CellRangeAddress(rowGhiChu.getRowNum(), rowGhiChu.getRowNum(), i * 2, i * 2 + 1));
         }
 
