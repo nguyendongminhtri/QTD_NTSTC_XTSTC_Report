@@ -82,7 +82,7 @@ public class Main {
         };
 
         // Chạy ngay lần đầu, sau đó lặp lại mỗi 10 phút
-        scheduler.scheduleAtFixedRate(job, 0, 55, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(job, 0, 60, TimeUnit.SECONDS);
     }
 
 
@@ -94,7 +94,7 @@ public class Main {
                         FROM vwGiao_Dich
                         WHERE 
                              CAST(Ngay AS DATE) = ?
-                            AND ten_loai_giao_dich IN (N'Xuất tài sản thế chấp', N'Nhập tài sản thế chấp', N'Xuất TS giữ hộ')
+                            AND ten_loai_giao_dich IN (N'Xuất tài sản thế chấp', N'Nhập tài sản thế chấp', N'Xuất TS giữ hộ', N'Nhập TS giữ hộ')
                             AND object_id IS NOT NULL
                     )
                     SELECT 
@@ -330,7 +330,8 @@ public class Main {
         for (int i = 0; i <= 4; i++) {
             sheet.setColumnWidth(i, 6000);
         }
-        currentRow+=15;
+        sheet.setRowBreak(currentRow);
+        currentRow+=2;
         currentRow = writeHeader(workbook, sheet, currentRow, boldCenterStyle);
         currentRow++;
         currentRow = writeLeftBoltLine(sheet, currentRow,
@@ -448,8 +449,8 @@ public class Main {
             cell.setCellStyle(centerStyle);
             sheet.addMergedRegion(new CellRangeAddress(rowTen.getRowNum(), rowTen.getRowNum(), i * 2, i * 2 + 1));
         }
-        currentRow++;
-        currentRow++;
+        sheet.setRowBreak(currentRow);
+        currentRow+=2;
         currentRow = writeHeaderDuoi(workbook, sheet, currentRow, boldCenterStyle);
         currentRow++;
         String[] centeredLines = {
@@ -812,7 +813,7 @@ public class Main {
         // Margin
         sheet.setMargin(Sheet.LeftMargin, 0.1);
         sheet.setMargin(Sheet.RightMargin, 0.1);
-        sheet.setMargin(Sheet.TopMargin, 0.5);
+        sheet.setMargin(Sheet.TopMargin, 0.8);
         sheet.setMargin(Sheet.BottomMargin, 0.5);
     }
 
