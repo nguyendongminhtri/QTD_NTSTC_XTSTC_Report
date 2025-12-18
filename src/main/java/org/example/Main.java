@@ -26,6 +26,21 @@ public class Main {
         int soLuong;
         String seri;
         String loaiGiaoDich;
+        String tk_no;
+        String tk_co;
+
+        @Override
+        public String toString() {
+            return "TaiSanTheChap{" +
+                    "hoTen='" + hoTen + '\'' +
+                    ", diaChi='" + diaChi + '\'' +
+                    ", soLuong=" + soLuong +
+                    ", seri='" + seri + '\'' +
+                    ", loaiGiaoDich='" + loaiGiaoDich + '\'' +
+                    ", tk_no='" + tk_no + '\'' +
+                    ", tk_co='" + tk_co + '\'' +
+                    '}';
+        }
     }
 
     public static void main(String[] args) {
@@ -86,25 +101,26 @@ public class Main {
     }
 
 
-
     private static void processDate(String fixedDate, Connection conn, List<String> danhSachFileDaXuat) {
         String sql = """
-                    WITH Giaodich_Filtered AS (
-                        SELECT DISTINCT object_id, ten_loai_giao_dich
-                        FROM vwGiao_Dich
-                        WHERE 
-                             CAST(Ngay AS DATE) = ?
-                            AND ten_loai_giao_dich IN (N'Xuất tài sản thế chấp', N'Nhập tài sản thế chấp', N'Xuất TS giữ hộ', N'Nhập TS giữ hộ')
-                            AND object_id IS NOT NULL
-                    )
-                    SELECT 
-                        TSTC.ChuTS_Hoten AS [Họ và tên],
-                        TSTC.ChuTS_Diachi AS [Địa chỉ],
-                        TSTC.tstc_soluong AS [Số lượng],
-                        TSTC.tstc_ten AS [Seri],
-                        GD.ten_loai_giao_dich AS [Loại giao dịch]
-                    FROM Tdung_Taisanthechap TSTC
-                    INNER JOIN Giaodich_Filtered GD ON GD.object_id = TSTC.TSTC_ID
+                WITH Giaodich_Filtered AS (
+                    SELECT DISTINCT object_id, ten_loai_giao_dich, ma_tk_no, ma_tk_co
+                    FROM vwGiao_Dich
+                    WHERE\s
+                         CAST(Ngay AS DATE) = ?
+                        AND ten_loai_giao_dich IN (N'Xuất tài sản thế chấp', N'Nhập tài sản thế chấp', N'Xuất TS giữ hộ', N'Nhập TS giữ hộ')
+                        AND object_id IS NOT NULL
+                )
+                SELECT\s
+                    TSTC.ChuTS_Hoten AS [Họ và tên],
+                    TSTC.ChuTS_Diachi AS [Địa chỉ],
+                    TSTC.tstc_soluong AS [Số lượng],
+                    TSTC.tstc_ten AS [Seri],
+                    GD.ten_loai_giao_dich AS [Loại giao dịch],
+                    GD.ma_tk_no AS [tk_no],
+                    GD.ma_tk_co AS [tk_co]
+                FROM Tdung_Taisanthechap TSTC
+                INNER JOIN Giaodich_Filtered GD ON GD.object_id = TSTC.TSTC_ID
                 """;
 
         List<TaiSanTheChap> danhSach = new ArrayList<>();
@@ -120,6 +136,8 @@ public class Main {
                     item.soLuong = rs.getInt("Số lượng");
                     item.seri = rs.getString("Seri");
                     item.loaiGiaoDich = rs.getString("Loại giao dịch");
+                    item.tk_no = rs.getString("tk_no");
+                    item.tk_co = rs.getString("tk_co");
                     danhSach.add(item);
                 }
             }
@@ -130,7 +148,28 @@ public class Main {
         }
 
         System.out.println("📊 Số bản ghi ngày " + fixedDate + ": " + danhSach.size());
-
+        System.err.println("danh Sach --> " + danhSach);
+        // Sau khi đã add hết vào danhSach
+        for (TaiSanTheChap item : danhSach) {
+            boolean tkNoEmpty = (item.tk_no.trim().isEmpty());
+            boolean tkCoEmpty = (item.tk_co.trim().isEmpty());
+            if (tkNoEmpty && tkCoEmpty) {
+                System.out.println("❌ Bản ghi không hợp lệ:");
+                System.out.println(" Họ tên: " + item.hoTen);
+                System.out.println(" Địa chỉ: " + item.diaChi);
+                System.out.println(" Số lượng: " + item.soLuong);
+                System.out.println(" Seri: " + item.seri);
+                System.out.println(" Loại giao dịch: " + item.loaiGiaoDich);
+                System.out.println(" tk_no: " + item.tk_no);
+                System.out.println(" tk_co: " + item.tk_co);
+                System.out.println("-----------------------------");
+            }
+        }
+        danhSach.removeIf(item ->
+                (item.tk_no.trim().isEmpty()) &&
+                        (item.tk_co.trim().isEmpty())
+        );
+        System.out.println("📊 Số bản ghi ngày " + fixedDate + ": SAU KHI XÓA " + danhSach.size());
         // Phân loại giao dịch
         List<TaiSanTheChap> danhSachXuat = new ArrayList<>();
         List<TaiSanTheChap> danhSachNhap = new ArrayList<>();
@@ -331,7 +370,7 @@ public class Main {
             sheet.setColumnWidth(i, 6000);
         }
         sheet.setRowBreak(currentRow);
-        currentRow+=2;
+        currentRow += 2;
         currentRow = writeHeader(workbook, sheet, currentRow, boldCenterStyle);
         currentRow++;
         currentRow = writeLeftBoltLine(sheet, currentRow,
@@ -450,7 +489,7 @@ public class Main {
             sheet.addMergedRegion(new CellRangeAddress(rowTen.getRowNum(), rowTen.getRowNum(), i * 2, i * 2 + 1));
         }
         sheet.setRowBreak(currentRow);
-        currentRow+=2;
+        currentRow += 2;
         currentRow = writeHeaderDuoi(workbook, sheet, currentRow, boldCenterStyle);
         currentRow++;
         String[] centeredLines = {
@@ -776,7 +815,6 @@ public class Main {
 
         return currentRow;
     }
-
 
 
     /**
