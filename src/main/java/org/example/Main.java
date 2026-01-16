@@ -323,8 +323,8 @@ public class Main {
                 leftStyle, 0, 6);
         String[] row151617 = {
                 "1. Bà: Phùng Thị Loan - Giám đốc",
-                "2. Bà: Nguyễn Thị Thúy Hằng - Kế toán",
-                "3. Ông: Vũ Đình Kiên - Thủ quỹ (thủ kho)"
+                "2. Ông: Vũ Đình Kiên - Kế toán",
+                "3. Ông: Nguyễn Đồng Chính - Thủ quỹ (thủ kho)"
         };
 
         currentRow = writeLeftNormalLines(sheet, currentRow, row151617, normalLeftStyle, 0, 6);
@@ -481,7 +481,7 @@ public class Main {
         // Dòng tên người ký
         currentRow += 4; // tạo khoảng trống cho chữ ký
         Row rowTen = sheet.createRow(currentRow++);
-        String[] tenNguoiKy = {"Vũ Đình Kiên", "Nguyễn Thị Thúy Hằng", "Phùng Thị Loan"};
+        String[] tenNguoiKy = {"Nguyễn Đồng Chính", "Vũ Đình Kiên", "Phùng Thị Loan"};
         for (int i = 0; i < tenNguoiKy.length; i++) {
             Cell cell = rowTen.createCell(i * 2);
             cell.setCellValue(tenNguoiKy[i]);
@@ -529,8 +529,8 @@ public class Main {
                 boldLeftStyle, 0, 6);
         String[] row151617 = {
                 "1. Bà: Phùng Thị Loan - Giám đốc",
-                "2. Bà: Nguyễn Thị Thúy Hằng - Kế toán",
-                "3. Ông: Vũ Đình Kiên - Thủ quỹ (thủ kho)"
+                "2. Ông: Vũ Đình Kiên - Kế toán",
+                "3. Ông: Nguyễn Đồng Chính - Thủ quỹ (thủ kho)"
         };
         currentRow = writeLeftNormalLines(sheet, currentRow, row151617, normalLeftStyle, 0, 6);
         currentRow = writeLeftBoltLine(sheet, currentRow,
