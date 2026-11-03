@@ -50,13 +50,17 @@ public class Main {
         Runnable job = () -> {
             System.out.println("🔄 Job chạy lúc: " + java.time.LocalDateTime.now());
 
-            String url = "jdbc:sqlserver://MAYCHU:1433;databaseName=ITDVAPCF;encrypt=true;trustServerCertificate=true;";
+            String url = "jdbc:sqlserver://127.0.0.1:1433;databaseName=ITDVAPCF;encrypt=true;trustServerCertificate=true;";
             String user = "sa";
             String password = "1q2w3e4r5t!@#$%aA@th";
 
+//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+//            LocalDate startDate = LocalDate.of(2026, 10, 1);
+//            LocalDate endDate = LocalDate.now();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-            LocalDate startDate = LocalDate.of(2025, 1, 1);
             LocalDate endDate = LocalDate.now();
+// Lùi lại đúng 2 tháng từ ngày hiện tại để làm mốc bắt đầu
+            LocalDate startDate = endDate.minusMonths(2);
 
             String sharedPath = "D:\\Bao Cao TSTC From 2025";
             List<String> danhSachFileDaXuat = new ArrayList<>();
