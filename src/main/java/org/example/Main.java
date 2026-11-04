@@ -107,24 +107,49 @@ public class Main {
 
     private static void processDate(String fixedDate, Connection conn, List<String> danhSachFileDaXuat) {
         String sql = """
+               
                 WITH Giaodich_Filtered AS (
-                    SELECT DISTINCT object_id, ten_loai_giao_dich, ma_tk_no, ma_tk_co
-                    FROM vwGiao_Dich
-                    WHERE\s
-                         CAST(Ngay AS DATE) = ?
-                        AND ten_loai_giao_dich IN (N'Xuất tài sản thế chấp', N'Nhập tài sản thế chấp', N'Xuất TS giữ hộ', N'Nhập TS giữ hộ')
-                        AND object_id IS NOT NULL
-                )
-                SELECT\s
-                    TSTC.ChuTS_Hoten AS [Họ và tên],
-                    TSTC.ChuTS_Diachi AS [Địa chỉ],
-                    TSTC.tstc_soluong AS [Số lượng],
-                    TSTC.tstc_ten AS [Seri],
-                    GD.ten_loai_giao_dich AS [Loại giao dịch],
-                    GD.ma_tk_no AS [tk_no],
-                    GD.ma_tk_co AS [tk_co]
-                FROM Tdung_Taisanthechap TSTC
-                INNER JOIN Giaodich_Filtered GD ON GD.object_id = TSTC.TSTC_ID
+                                                                SELECT DISTINCT
+                                                                    object_id,
+                                                                    ten_loai_giao_dich,
+                                                                    ma_tk_no,
+                                                                    ma_tk_co,
+                                                                    Ngay
+                                                                FROM vwGiao_Dich
+                                                                WHERE
+                                                                    -- Giữ nguyên tham số truyền ngày của bạn (ví dụ: ? hoặc giá trị ngày động)
+                                                                    CAST(Ngay AS DATE) = ?
+                                                                    AND (
+                                                                        ten_loai_giao_dich IN (
+                                                                            N'Xuất tài sản thế chấp',
+                                                                            N'Nhập tài sản thế chấp',
+                                                                            N'Xuất TS giữ hộ',
+                                                                            N'Nhập TS giữ hộ',
+                                                                            N'Nhập tài sản giữ hộ'
+                                                                        )
+                                                                        OR ten_loai_giao_dich LIKE N'%giữ hộ%'
+                                                                    )
+                                                                    AND object_id IS NOT NULL
+                                                            ),
+                                                            TongHop_TaiSan AS (
+                                                                -- Gộp danh sách từ bảng Tài sản thế chấp truyền thống
+                                                                SELECT TSTC_ID AS TaiSan_ID, ChuTS_Hoten, ChuTS_Diachi, tstc_soluong, tstc_ten FROM Tdung_Taisanthechap
+                                                                UNION ALL
+                                                                -- Bổ sung gộp danh sách từ bảng Tài sản giữ hộ để không bị sót mã mới phát sinh trong ngày
+                                                                SELECT TSTC_ID AS TaiSan_ID, ChuTS_Hoten, ChuTS_Diachi, tstc_soluong, tstc_ten FROM TDUNG_TaiSanGiuHo
+                                                            )
+                                                            SELECT\s
+                                                                TS.ChuTS_Hoten AS [Họ và tên],
+                                                                TS.ChuTS_Diachi AS [Địa chỉ],
+                                                                TS.tstc_soluong AS [Số lượng],
+                                                                TS.tstc_ten AS [Seri],
+                                                                GD.Ngay AS [Ngày giao dịch],
+                                                                GD.ten_loai_giao_dich AS [Loại giao dịch],
+                                                                GD.ma_tk_no AS [tk_no],
+                                                                GD.ma_tk_co AS [tk_co]
+                                                            FROM TongHop_TaiSan TS
+                                                            INNER JOIN Giaodich_Filtered GD ON GD.object_id = TS.TaiSan_ID
+                                                            ORDER BY GD.Ngay DESC, TS.ChuTS_Hoten;
                 """;
 
         List<TaiSanTheChap> danhSach = new ArrayList<>();
